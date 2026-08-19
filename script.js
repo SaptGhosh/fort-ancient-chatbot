@@ -2,46 +2,77 @@ const input = document.getElementById("question-input");
 const sendButton = document.getElementById("send-button");
 const chatBox = document.getElementById("chat-box");
 
-
-function sendMessage() {
-
-    // Get what the user typed
+async function sendMessage() {
     const question = input.value.trim();
 
-    // Do nothing if the input is empty
     if (question === "") {
         return;
     }
 
-    // Create a new message
-    const userMessage = document.createElement("div");
+    // Show user message
+    addMessage(question, "user-message");
 
-    userMessage.classList.add("user-message");
-
-    userMessage.textContent = question;
-
-    // Add it to the chat
-    chatBox.appendChild(userMessage);
-
-    // Clear the input box
+    // Clear input
     input.value = "";
 
-    // Scroll to the newest message
-    chatBox.scrollTop = chatBox.scrollHeight;
+    // Disable button while waiting
+    sendButton.disabled = true;
+    sendButton.textContent = "Thinking...";
+
+    try {
+        const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                question: question
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Something went wrong.");
+        }
+
+        addMessage(data.answer, "bot-message");
+
+    } catch (error) {
+        console.error(error);
+
+        addMessage(
+            "Sorry, something went wrong while contacting the chatbot.",
+            "bot-message"
+        );
+    }
+
+    // Re-enable button
+    sendButton.disabled = false;
+    sendButton.textContent = "Send";
+
+    // Put cursor back in input box
+    input.focus();
 }
 
+function addMessage(text, className) {
+    const message = document.createElement("div");
+
+    message.classList.add(className);
+
+    message.textContent = text;
+
+    chatBox.appendChild(message);
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
 
 // Send when button is clicked
 sendButton.addEventListener("click", sendMessage);
 
-
 // Send when Enter is pressed
 input.addEventListener("keydown", function(event) {
-
     if (event.key === "Enter") {
-
         sendMessage();
-
     }
-
 });
